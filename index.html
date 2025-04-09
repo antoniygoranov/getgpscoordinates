@@ -1,53 +1,97 @@
 <!DOCTYPE html>
-<html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вземи GPS координати</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+        #coordinates {
+            font-size: 18px;
+            text-align: center;
+        }
+    </style>
+</head>
 <body>
     <h2>Твоите GPS координати</h2>
-    <p id="coordinates"></p>
+    <p id="coordinates">Натисни бутона, за да видиш координатите си</p>
+    <button onclick="getLocation()">Вземи координати</button>
     <button onclick="shareCoordinates()">Сподели координатите</button>
 
     <script>
+        let coords = null;
+
         function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(showPosition, showError);
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        coords = { latitude, longitude };
+                        document.getElementById("coordinates").innerHTML = 
+                            `Широчина: ${latitude}<br>Дължина: ${longitude}`;
+                    },
+                    (error) => {
+                        let errorMessage = "Възникна грешка.";
+                        switch (error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage = "Достъпът до локацията е отказан.";
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage = "Локацията не е налична.";
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage = "Времето за заявка изтече.";
+                                break;
+                        }
+                        document.getElementById("coordinates").innerHTML = errorMessage;
+                    },
+                    {
+                        enableHighAccuracy: true, // По-висока точност за Android
+                        timeout: 10000,           // Максимум 10 секунди чакане
+                        maximumAge: 0             // Без кеширани данни
+                    }
+                );
             } else {
-                document.getElementById("coordinates").innerHTML = "Геолокацията не се поддържа от този браузър.";
-            }
-        }
-
-        function showPosition(position) {
-            let lat = position.coords.latitude;
-            let lon = position.coords.longitude;
-            document.getElementById("coordinates").innerHTML = "Широта: " + lat + "<br>Дължина: " + lon;
-            window.coords = {latitude: lat, longitude: lon};
-        }
-
-        function showError(error) {
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    document.getElementById("coordinates").innerHTML = "Потребителят отказа достъп до геолокация.";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    document.getElementById("coordinates").innerHTML = "Информацията за местоположението не е налична.";
-                    break;
-                case error.TIMEOUT:
-                    document.getElementById("coordinates").innerHTML = "Времето за заявка изтече.";
-                    break;
-                case error.UNKNOWN_ERROR:
-                    document.getElementById("coordinates").innerHTML = "Възникна неизвестна грешка.";
-                    break;
+                document.getElementById("coordinates").innerHTML = 
+                    "Този браузър не поддържа геолокация.";
             }
         }
 
         function shareCoordinates() {
-            if (window.coords) {
-                let shareText = `Моите координати: Широта ${window.coords.latitude}, Дължина ${window.coords.longitude}`;
-                alert("Копирай това и ми го изпрати: " + shareText);
+            if (coords) {
+                const shareText = `Моите координати: Широчина ${coords.latitude}, Дължина ${coords.longitude}`;
+                if (navigator.share && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+                    // За Android и iOS устройства с Web Share API
+                    navigator.share({
+                        title: "Моите координати",
+                        text: shareText
+                    }).catch((error) => {
+                        alert("Грешка при споделяне: " + error);
+                    });
+                } else {
+                    // За други устройства
+                    prompt("Копирай този текст и ми го изпрати:", shareText);
+                }
             } else {
-                alert("Първо трябва да се заредят координатите!");
+                alert("Първо вземи координатите!");
             }
         }
-
-        window.onload = getLocation;
     </script>
 </body>
 </html>
